@@ -9,6 +9,7 @@ import * as use from '@tensorflow-models/universal-sentence-encoder';
 const browserAPI_serviceworker = typeof browser !== "undefined" ? browser : chrome;
 let model;
 let modelLoadingPromise = null;
+let trained_model;
 const embeddingCache = new Map(); // Cache pour les embedding
 
 async function loadModel() {
@@ -102,7 +103,7 @@ async function analyzeText(sentence, keywords, threshold = 0.7) {
 }
 
 
-loadModel(); // On charge le modèle dès le début
+// loadModel(); // On charge le modèle dès le début
 
 function handleMessage(message, sender, sendResponse) {
     if (message.type === 'analyzeText' && message.sentence && Array.isArray(message.keywords)) {
@@ -119,4 +120,24 @@ function handleMessage(message, sender, sendResponse) {
         return true; // Indique une réponse asynchrone à l’API
     }
 }
-browserAPI_serviceworker.runtime.onMessage.addListener(handleMessage);
+// browserAPI_serviceworker.runtime.onMessage.addListener(handleMessage);
+
+
+async function load_trained_model() {
+    console.log('load_trained_model');
+/*     try {
+ */       
+        // Tente de charger le modèle
+        trained_model = await tf.loadLayersModel('model_tfjs/model.json');
+        console.log("Model loaded successfully!");
+        return trained_model
+
+        // await trained_model.summary();
+    /* } catch (error) {
+        // Si une erreur se produit, elle est capturée ici
+        console.error('Erreur lors du chargement du modèle :', error);
+        alert("Une erreur est survenue lors du chargement du modèle. Veuillez vérifier le chemin ou la connexion.");
+    } */
+}
+
+load_trained_model();

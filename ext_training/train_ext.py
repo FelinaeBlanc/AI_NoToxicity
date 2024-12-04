@@ -1,15 +1,27 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout, GlobalMaxPool1D
+import tensorflowjs as tfjs
+#from tensorflow.keras.preprocessing.text import Tokenizer
+#from tensorflow.keras.preprocessing.sequence import pad_sequences
+import os
+#from tensorflow.keras import initializers
+#from tensorflow.keras.models import Sequential
+#from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout, GlobalMaxPool1D
+from tf_keras.preprocessing.text import Tokenizer
+from tf_keras.preprocessing.sequence import pad_sequences 
+from tf_keras import initializers
+from tf_keras.models import Sequential
+from tf_keras.layers import Embedding, LSTM, Dense, Dropout, GlobalMaxPool1D
+import tf_keras
 
-print("ça marche")
+# Set the environment variable to use legacy Keras (Keras 2.x)
+# os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
+print('tf_keras.__version__', tf_keras.__version__)
 
 # Chargement des données
-df = pd.read_csv('./train.csv')
+df = pd.read_csv('ext_training/train.csv')
 
 # Création de la colonne cible 'toxic' (0 ou 1) en combinant toutes les colonnes de toxicité
 df['toxic_label'] = df[['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']].max(axis=1)
@@ -36,8 +48,8 @@ X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_st
 
 # Création du modèle
 model = Sequential([
-    Embedding(max_words, 128, input_length=max_len),
-    LSTM(64, return_sequences=True),
+    Embedding(input_dim=max_words, output_dim=128, input_length=max_len),
+    LSTM(64, return_sequences=True, kernel_initializer=initializers.GlorotUniform(), recurrent_initializer=initializers.GlorotUniform()),
     GlobalMaxPool1D(),
     Dropout(0.5),
     Dense(64, activation='relu'),
@@ -57,6 +69,7 @@ loss, accuracy = model.evaluate(X_val, y_val)
 print(f"Accuracy: {accuracy * 100:.2f}%")
 
 model.save('toxic_comment_model.h5')
+tfjs.converters.save_keras_model(model, 'model_tfjs')
 print("Modèle sauvegardé sous le nom 'toxic_comment_model.h5'")
 
 # Prédiction d'un commentaire

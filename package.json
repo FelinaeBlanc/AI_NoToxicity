@@ -13,6 +13,7 @@
   "scripts": {
     "build:chrome": "cp manifests/manifest.chrome.json manifest.json && npm run build",
     "build:firefox": "cp manifests/manifest.firefox.json manifest.json && npm run build",
-    "build": "npx webpack"
+    "build": "npx webpack",
+    "convert:model": "mkdir -p use_model_extension && tensorflowjs_converter --input_format=keras ./ext_training/toxic_comment_model.h5 use_model_extension"
   }
 }
