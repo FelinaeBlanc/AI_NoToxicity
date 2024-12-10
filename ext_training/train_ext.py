@@ -47,8 +47,10 @@ from sklearn.model_selection import train_test_split
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Création du modèle
+# TODO : Relancer ce script pour tester si le modèle est bien (j'ai mis input_length à un car sinon Error: Error when checking : expected embedding_input to have shape [null,200] but got array with shape [3,1].)
+# TODO : Ne marche pas
 model = Sequential([
-    Embedding(input_dim=max_words, output_dim=128, input_length=max_len),
+    Embedding(input_dim=max_words, output_dim=128, input_length=1),
     LSTM(64, return_sequences=True, kernel_initializer=initializers.GlorotUniform(), recurrent_initializer=initializers.GlorotUniform()),
     GlobalMaxPool1D(),
     Dropout(0.5),

@@ -31,6 +31,21 @@ async function loadModel() {
     return model;
 }
 
+async function loadTrainedModel() {
+    try {
+        // Tente de charger le modèle
+        trained_model = await tf.loadLayersModel('model_tfjs/model.json');
+        console.log("trained_model loaded successfully!");
+        print('model.predict(gros fils de pute)', model.predict('gros fils de pute'))
+
+        return model
+    } catch (error) {
+        // Si une erreur se produit, elle est capturée ici
+        console.error('Erreur lors du chargement du modèle :', error);
+        alert("Une erreur est survenue lors du chargement du modèle. Veuillez vérifier le chemin ou la connexion.");
+    }
+}
+
 async function getEmbeddings(texts) {
     await loadModel(); // Vérifie que le modèle est chargé
 
@@ -61,8 +76,42 @@ async function getEmbeddings(texts) {
     return newEmbeddings; // retourne un tableau 2D du vecteur
 }
 
+async function getEmbeddingsTrained(texts) {
+    await loadModel(true); // Charger le modèle personnalisé TF.js
+
+    const newEmbeddings = [];
+    const textsToEmbed = [];
+
+    // Vérifie le cache pour chaque texte
+    for (const text of texts) {
+        if (embeddingCache.has(text)) {
+            newEmbeddings.push(embeddingCache.get(text));
+        } else {
+            textsToEmbed.push(text);
+        }
+    }
+
+    // Transformer les textes en tenseurs pour les prédictions
+    if (textsToEmbed.length > 0) {
+        const tensors = textsToEmbed.map(text => tf.tensor(text.split(' '))); // Exemple de traitement simple
+        const embeddings = await model.predict(tensors); // Utilisez la méthode appropriée ici
+        const embeddingsArray = embeddings.arraySync();
+
+        // Ajouter les nouveaux embeddings au cache et à la liste des résultats
+        textsToEmbed.forEach((text, index) => {
+            embeddingCache.set(text, embeddingsArray[index]);
+            newEmbeddings.push(embeddingsArray[index]);
+        });
+    }
+
+    return newEmbeddings;
+}
+
+
 // Calculer la similarité cosinus entre deux vecteurs
 function cosineSimilarity(vecA, vecB) {
+    console.log('vecA.length', vecA.length)
+    console.log('vecB.length', vecB.length)
     const dotProduct = vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
     const magnitudeA = Math.sqrt(vecA.reduce((sum, val) => sum + val * val, 0));
     const magnitudeB = Math.sqrt(vecB.reduce((sum, val) => sum + val * val, 0));
@@ -71,11 +120,10 @@ function cosineSimilarity(vecA, vecB) {
 
 async function analyzeText(sentence, keywords, threshold = 0.7) {
     try {
-        console.log("Analysing uwu")
         // Obtenir les embeddings pour tous les mots en une seule fois
         //const texts = [sentence, ...keywords];
-        const embeddingsA = await getEmbeddings([sentence]);
-        const embeddingsB = await getEmbeddings(keywords);
+        const embeddingsA = await getEmbeddingsTrained([sentence]);
+        const embeddingsB = await getEmbeddingsTrained(keywords);
 
         console.log("OKi embedding")
         // Séparer l'embedding de la phrase et des mots-clés
@@ -103,7 +151,7 @@ async function analyzeText(sentence, keywords, threshold = 0.7) {
 }
 
 
-// loadModel(); // On charge le modèle dès le début
+loadTrainedModel(); // On charge le modèle dès le début
 
 function handleMessage(message, sender, sendResponse) {
     if (message.type === 'analyzeText' && message.sentence && Array.isArray(message.keywords)) {
@@ -120,24 +168,4 @@ function handleMessage(message, sender, sendResponse) {
         return true; // Indique une réponse asynchrone à l’API
     }
 }
-// browserAPI_serviceworker.runtime.onMessage.addListener(handleMessage);
-
-
-async function load_trained_model() {
-    console.log('load_trained_model');
-/*     try {
- */       
-        // Tente de charger le modèle
-        trained_model = await tf.loadLayersModel('model_tfjs/model.json');
-        console.log("Model loaded successfully!");
-        return trained_model
-
-        // await trained_model.summary();
-    /* } catch (error) {
-        // Si une erreur se produit, elle est capturée ici
-        console.error('Erreur lors du chargement du modèle :', error);
-        alert("Une erreur est survenue lors du chargement du modèle. Veuillez vérifier le chemin ou la connexion.");
-    } */
-}
-
-load_trained_model();
+browserAPI_serviceworker.runtime.onMessage.addListener(handleMessage);
