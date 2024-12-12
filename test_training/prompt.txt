@@ -1,0 +1,132 @@
+This is how I train my model :
+
+// Déclare window globalement sur chrome (sinon problème dans les bundles)
+if (typeof browser === "undefined") {
+    globalThis.window = globalThis.window || globalThis;
+}
+
+import * as tf from '@tensorflow/tfjs';
+/* import * as use from '@tensorflow-models/universal-sentence-encoder'; */
+
+/* const browserAPI_serviceworker = typeof browser !== "undefined" ? browser : chrome;
+let model;
+let modelLoadingPromise = null; */
+let trained_model;
+const embeddingCache = new Map(); // Cache pour les embedding
+
+async function loadTrainedModel() {
+    try {
+        // Tente de charger le modèle
+        trained_model = await tf.loadLayersModel('model_tfjs/model.json');
+        console.log('trained_model = await tf.loadLayersModel(model_tfjs/model.json);')
+        return trained_model
+    } catch (error) {
+        // Si une erreur se produit, elle est capturée ici
+        console.error('Erreur lors du chargement du modèle :', error);
+    }
+}
+
+async function getEmbeddingsTrained(texts) {
+
+    const newEmbeddings = [];
+    const textsToEmbed = [];
+
+    // Vérifie le cache pour chaque texte
+    for (const text of texts) {
+        if (embeddingCache.has(text)) {
+            newEmbeddings.push(embeddingCache.get(text));
+        } else {
+            textsToEmbed.push(text);
+        }
+    }
+
+    // Transformer les textes en tenseurs pour les prédictions
+    if (textsToEmbed.length > 0) {
+        console.log(trained_model)
+        debugger
+        const embeddings = await trained_model.predict(textsToEmbed); // Utilisez la méthode appropriée ici
+        const embeddingsArray = embeddings.arraySync();
+
+        // Ajouter les nouveaux embeddings au cache et à la liste des résultats
+        textsToEmbed.forEach((text, index) => {
+            embeddingCache.set(text, embeddingsArray[index]);
+            newEmbeddings.push(embeddingsArray[index]);
+        });
+    }
+
+    return newEmbeddings;
+}
+
+// Fonction pour obtenir des prédictions avec ton modèle personnalisé
+async function getPredictionWithTrainedModel(texts) {
+    
+    const embeddings = await getEmbeddingsTrained(texts); // Obtenir les embeddings des textes
+    console.log('const embeddings = await getEmbeddingsTrained(texts);')
+    const tensors = embeddings.map(embed => tf.tensor(embed)); // Convertir les embeddings en tenseurs
+    console.log('const tensors = embeddings.map(embed => tf.tensor(embed));')
+    // Faire des prédictions avec ton modèle personnalisé
+    const predictions = trained_model.predict(tf.stack(tensors)); // Prédire avec le modèle
+    console.log('const predictions = trained_model.predict(tf.stack(tensors));')
+    console.log('return predictions.arraySync();')
+    return predictions.arraySync(); // Retourner les résultats de la prédiction
+}
+
+// Exemple d'utilisation
+async function analyzeText(texts) {
+    const predictions = await getPredictionWithTrainedModel(texts);
+    console.log("Prédictions : ", predictions);
+}
+
+// Charger le modèle dès le début
+await loadTrainedModel().then(() => {
+    console.log("Modèle chargé et prêt !");
+});
+
+
+analyzeText("Hello world!");
+
+I want it to be able to recognize toxic sentences and I'm not sure it's doing it right.
+
+Here's how I predict input in my js code :
+
+(async function () {
+    const charEncoder = (inputString, maxLength = 200) => {
+        const normalizedString = inputString.toLowerCase().replace(/[^a-z ]/g, '');
+        const charToIndex = char => {
+            if (char === ' ') return 27; // espace
+            const charCode = char.charCodeAt(0);
+            return charCode >= 97 && charCode <= 122 ? charCode - 96 : 0; // a=1, ..., z=26
+        };
+        const encoded = normalizedString
+            .split('')
+            .map(charToIndex)
+            .slice(0, maxLength);
+        const padded = Array(maxLength).fill(0);
+        encoded.forEach((val, idx) => {
+            padded[idx] = val;
+        });
+        return tf.tensor2d([padded], [1, maxLength]);
+    };
+
+    // Prédire depuis une phrase
+    const predictFromText = async (inputString, model) => {
+        const inputTensor = charEncoder(inputString);
+        const prediction = model.predict(inputTensor);
+        const result = (await prediction.array())[0][0];
+        inputTensor.dispose();
+        console.log(await prediction.array())
+        debugger
+        return result > 0.5 ? 'Positive' : 'Negative';
+    };
+
+    // Exemple d'utilisation
+    const main = async () => {
+        const model = await tf.loadLayersModel('./../model_tfjs/model.json');
+        let inputString = "Hi how are you ?";
+        let result = await predictFromText(inputString, model);
+        console.log('Prediction:', result);
+    };
+
+    main();
+    
+})();

@@ -2,7 +2,7 @@
     const charEncoder = (inputString, maxLength = 200) => {
         const normalizedString = inputString.toLowerCase().replace(/[^a-z ]/g, '');
         const charToIndex = char => {
-            if (char === ' ') return 27; // espace
+            if (char === ' ') return 27; // Space
             const charCode = char.charCodeAt(0);
             return charCode >= 97 && charCode <= 122 ? charCode - 96 : 0; // a=1, ..., z=26
         };
@@ -11,46 +11,109 @@
             .map(charToIndex)
             .slice(0, maxLength);
         const padded = Array(maxLength).fill(0);
-        encoded.forEach((val, idx) => {
-            padded[idx] = val;
-        });
+        encoded.forEach((val, idx) => padded[idx] = val);
         return tf.tensor2d([padded], [1, maxLength]);
     };
 
+    function tokenizeText(text, wordIndex) {
+        const words = text.toLowerCase().split(/\s+/); // Split text into words
+        const sequence = words.map(word => wordIndex[word] || 0); // Map words to indices
+        if (sequence.length > maxLen) {
+            sequence.splice(0, sequence.length - maxLen); // Truncate sequence if too long
+        }
+        const paddedSequence = Array(maxLen).fill(0);
+        for (let i = 0; i < sequence.length; i++) {
+            paddedSequence[maxLen - sequence.length + i] = sequence[i]; // Add padding
+        }
+        return tf.tensor([paddedSequence]);
+    }
+
     // Prédire depuis une phrase
     const predictFromText = async (inputString, model) => {
-        const inputTensor = charEncoder(inputString);
+        const inputTensor = charEncoder(inputString);  // Change to word-level encoding if needed
         const prediction = model.predict(inputTensor);
-        const result = (await prediction.array())[0][0];
+        const result = (await prediction.array())[0][0];  // Assuming a single output for binary classification
         inputTensor.dispose();
-        console.log(await prediction.array())
-        debugger
-        return result > 0.5 ? 'Positive' : 'Negative';
+        console.log('result:', inputString, result);
+        return result > 0.5 ? 'Toxic' : 'Non-Toxic';
     };
 
     // Exemple d'utilisation
     const main = async () => {
         const model = await tf.loadLayersModel('./../model_tfjs/model.json');
-        let inputString = "xddddddddddddddddd";
+        let inputString = "Hi how are you ?";
         let result = await predictFromText(inputString, model);
-        console.log('Prediction:', result);
-
+        console.log('Prediction:', inputString, result);
+        
+        // Test more sentences
         inputString = "stupid motherfucker";
         result = await predictFromText(inputString, model);
-        console.log('Prediction:', result);
+        console.log('Prediction:', inputString, result);
 
-        inputString = "you're such a piece of shit lmao";
+        // Test more sentences
+        inputString = "suck my dick";
         result = await predictFromText(inputString, model);
-        console.log('Prediction:', result);
+        console.log('Prediction:', inputString, result);
 
-        inputString = "go kill yourself dumbfuck";
+        // Test more sentences
+        inputString = "kill yourself";
         result = await predictFromText(inputString, model);
-        console.log('Prediction:', result);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "your mom is a whore";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "your mom is a bitch";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "your such a piece of shit";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "stupid";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "motherfucker";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "fucking bitch";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "fucking";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "bitch";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "I rawdogged your mom last night";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
+
+        // Test more sentences
+        inputString = "you're such a pussy";
+        result = await predictFromText(inputString, model);
+        console.log('Prediction:', inputString, result);
     };
 
     main();
-    
 })();
+
 
 
 // var trained_model;
